@@ -1,180 +1,124 @@
 package com.helloyogesh.mycanvas
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import kotlin.math.pow
-import kotlin.math.roundToInt
-import kotlin.math.sqrt
-import kotlin.random.Random
+import java.util.Calendar
+import java.util.TimeZone
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MainScreen()
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                MainScreen() // Call your MainScreen composable here
+            }
         }
     }
 }
 
+@SuppressLint("AutoboxingStateCreation")
 @Composable
 fun MainScreen() {
-    var points by remember {
-        mutableIntStateOf(0)
-    }
-    var isTimerRunning by remember {
-        mutableStateOf(false)
-    }
-    Column(modifier = Modifier.fillMaxSize()
-        .navigationBarsPadding()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "Points: $points",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Button(onClick = {
-                isTimerRunning = !isTimerRunning
-                points = 0
-            }) {
-                Text(text = if (isTimerRunning) "Reset" else "Start")
-            }
-            CountdownTimer(
-                isTimerRunning = isTimerRunning
-            ) {
-                isTimerRunning = false
-            }
-        }
-        BallClicker(
-            enabled = isTimerRunning
-        ) {
-            points++
-        }
-    }
-}
 
-@Composable
-fun CountdownTimer(
-    time: Int = 30000,
-    isTimerRunning: Boolean = false,
-    onTimerEnd: () -> Unit = {}
-) {
-    var curTime by remember {
-        mutableIntStateOf(time)
-    }
-    LaunchedEffect(key1 = curTime, key2 = isTimerRunning) {
-        if (!isTimerRunning) {
-            curTime = time
-            return@LaunchedEffect
-        }
-        if (curTime > 0) {
-            delay(1000L)
-            curTime -= 1000
-        } else {
-            onTimerEnd()
-        }
-    }
-    Text(
-        text = (curTime / 1000).toString(),
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Bold
-    )
-}
+        // Mutable state to hold the current system time
+        var isLightMode by remember { mutableStateOf(true) }
 
-@Composable
-fun BallClicker(
-    radius: Float = 100f,
-    enabled: Boolean = false,
-    ballColor: Color = Color.Red,
-    onBallClick: () -> Unit = {}
-) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        var ballPosition by remember {
-            mutableStateOf(
-                randomOffset(
-                    radius = radius,
-                    width = constraints.maxWidth,
-                    height = constraints.maxHeight
-                )
-            )
-        }
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(enabled) {
-                    if (!enabled) {
-                        return@pointerInput
-                    }
-                    detectTapGestures {
-                        val distance = sqrt(
-                            (it.x - ballPosition.x).pow(2) +
-                                    (it.y - ballPosition.y).pow(2)
-                        )
-                        if (distance <= radius) {
-                            ballPosition = randomOffset(
-                                radius = radius,
-                                width = constraints.maxWidth,
-                                height = constraints.maxHeight
-                            )
-                            onBallClick()
-                        }
-                    }
+        // Get the current system time (in UTC)
+        val currentMillis = remember { System.currentTimeMillis() }
+
+        // Use Calendar and TimeZone to get IST time
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"))
+        calendar.timeInMillis = currentMillis
+
+        // Extract hours, minutes, seconds in IST
+        var seconds by remember { mutableStateOf(calendar.get(Calendar.SECOND).toFloat()) }
+        var minutes by remember { mutableStateOf(calendar.get(Calendar.MINUTE).toFloat()) }
+        var hours by remember { mutableStateOf(calendar.get(Calendar.HOUR_OF_DAY).toFloat()) }
+
+        // Continuously update the time every second
+        LaunchedEffect(key1 = seconds) {
+            while (true) {
+                delay(1000L)
+
+                // Update the time from the calendar
+                calendar.timeInMillis = System.currentTimeMillis()
+
+                // Update the time components
+                seconds = calendar.get(Calendar.SECOND).toFloat()
+                minutes = calendar.get(Calendar.MINUTE).toFloat()
+                hours = calendar.get(Calendar.HOUR_OF_DAY).toFloat()
+
+                // Convert to 12-hour format
+                if (hours >= 12) {
+                    hours -= 12
                 }
-        ) {
-            drawCircle(
-                color = ballColor,
-                radius = radius,
-                center = ballPosition
-            )
+                if (hours == 0f) {
+                    hours = 12f // Correct the zero hour to display 12
+                }
+            }
         }
+
+        // Log the updated IST time
+        Log.d("MainActivity", "IST Time Seconds: $seconds, Minutes: $minutes, Hours: $hours")
+
+        // Pass the dynamically calculated IST time to the Clock composable
+        Clock(
+            seconds = seconds,
+            minutes = minutes,
+            hours = hours,
+            isLightMode = isLightMode
+        )
+        LightDarkSwitch(
+            isLightMode = isLightMode,
+            onModeChange = { isLightMode = it }
+        )
+        SquareClock(
+            seconds = seconds,
+            minutes = minutes,
+            hours = hours,
+            isLightMode = isLightMode
+        )
     }
 }
 
-private fun randomOffset(radius: Float, width: Int, height: Int): Offset {
-    return Offset(
-        x = Random.nextInt(radius.roundToInt(), width - radius.roundToInt()).toFloat(),
-        y = Random.nextInt(radius.roundToInt(), height - radius.roundToInt()).toFloat()
-    )
-}
+
+
+
 
 @Preview(showBackground = true)
 @Composable
